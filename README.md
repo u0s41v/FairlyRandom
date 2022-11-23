@@ -1,6 +1,6 @@
 # FairlyRandom
 
-A bot for [Manifold Markets](https://manifold.markets/) that generates random numbers in a fair way. Specifically it provides the following properties:
+A bot for [Manifold Markets](https://manifold.markets/) that generates Random numbers in a Fair way. Specifically it provides the following properties:
  - Any outcome in the specified range is equally likely, and each randomization is independent.
  - Nobody can manipulate the random numbers.
  - Nobody can predict the random numbers in advance.
@@ -11,6 +11,7 @@ Given the following assumptions:
  - SHA256 is pre-image resistant.
  - The first 8 bytes of a SHA256 hash are distributed in a uniformly random way.
  - At least one entity in Cloudflare's [League of Entropy](https://www.cloudflare.com/leagueofentropy/) is trustworthy.
+ - Validity of the [drand distributed randomness protocol](https://blog.cloudflare.com/league-of-entropy/) as described in the [paper](https://www.ieee-security.org/TC/SP2017/papers/413.pdf).
 
 Usage instructions and suggestions:
  1. In order to use the bot, you'll need to first add your market to a designated group (currently "fairlyrandom").

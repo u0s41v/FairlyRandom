@@ -22,7 +22,6 @@ class FairlyRandom:
 
     def do_get(self, path, default=None):
         url = f"{self.manifold_api_url}{path}"
-        #print(url)
         try:
             req = requests.get(url)
         except Exception as e:
@@ -50,12 +49,14 @@ class FairlyRandom:
     def randomness_link(self, rounds):
         return f'[{rounds}]({self.random_api_url}/{rounds})'
 
+    def mention_user(self, user):
+        return f'[@{user}](https://manifold.markets/{user})'
+
     def get_randomness(self, rounds, cache):
         if rounds in cache:
             return cache[rounds]
 
         url = f"{self.random_api_url}/{rounds}"
-        print(url)
         try:
             req = requests.get(url, timeout=3)
         except Exception as e:
@@ -128,6 +129,7 @@ class FairlyRandom:
             req["salt"] = comment["id"]
             req["contractId"] = comment["contractId"]
             req["state"] = "init"
+            req["user"] = comment["userName"]
             return [req]
         return []
 
@@ -146,7 +148,8 @@ class FairlyRandom:
                 pending_requests += self.check_new_request(comment)
                 new_ts = max(new_ts, create_time)
 
-        print(f"Added {len(pending_requests)} new requests")
+        if len(pending_requests) > 0:
+            print(f"Added {len(pending_requests)} new requests")
         self.last_comment_ts = max(new_ts, self.last_comment_ts)
         self.pending_requests += pending_requests
 
@@ -178,22 +181,22 @@ class FairlyRandom:
                 return req
 
             rounds = randomness["round"]
+            evenly_divisible = ((2**64)//max_num)*max_num
             comment = "\n".join([
-                f'### You asked for a random integer between 1 and {req["number"]}, inclusive. Coming up shortly!',
+                f'### {self.mention_user(req["user"])} you asked for a random integer between 1 and {req["number"]}, inclusive. Coming up shortly!',
                 'You can view the open-source implementation and usage instructions for this bot on [GitHub](https://github.com/u0s41v/FairlyRandom/).'
                 '',
                 '#### Technical details'
                 '',
                 f'Previous round: {self.randomness_link(rounds)}, next round: {self.randomness_link(rounds+1)}, salt: {req["salt"]}.',
-                'Algorithm for converting to requested range:',
+                'Algorithm:',
                 '```',
-                f'evenly_divisible = {((2**64)//max_num)*max_num}',
                 f'm = hashlib.sha256()',
                 f"m.update(randomness['randomness'].encode('ascii'))",
                 f"m.update('-{salt}'.encode('ascii'))",
                 'while True:',
                 "   m_int = int.from_bytes(m.digest()[:8], byteorder='big')",
-                '   if m_int < evenly_divisible:',
+                f'   if m_int < {evenly_divisible}:',
                 f'       return (m_int % {max_num}) + 1',
                 '   m.update("-RETRY")',
                 '```',
@@ -220,17 +223,14 @@ class FairlyRandom:
             salt = req["salt"]
             rand_int, log, hex_digest, num_retries = self.randomness_to_int(randomness, salt, max_num)
             comment = "\n".join([
-                f'### Your random number is: {rand_int}',
+                f'### {self.mention_user(req["user"])} your random number is: {rand_int}',
                 '',
                 '#### Technical details'
                 '',
                 f'Round: {self.randomness_link(rounds)}, salt: {salt}, retries: {num_retries}.',
-                f'To validate the result, run the following Linux command: ',
-                '```',
-                f'echo -n {log} | sha256sum',
-                '```',
-                f'Take the first sixteen digits of the output (0x{hex_digest}) and convert from hexadecimal ({int(hex_digest, 16)}).',
-                f'Then compute the modulus by {max_num} and add one.',
+                f'To validate, run the following Linux command: ',
+                f'`echo -n {log} | sha256sum`.',
+                f'Take the first sixteen hex digits of the output (0x{hex_digest} = {int(hex_digest, 16)}) modulo {max_num} and add one.',
                 'Randomness details: ',
                 '```',
                 json.dumps(randomness),
@@ -269,7 +269,7 @@ def main():
     while True:
         fr.find_new_requests()
         fr.save_state()
-        fr.show_pending_requests()
+        #fr.show_pending_requests()
         fr.process_pending_requests()
         fr.save_state()
         time.sleep(3)
