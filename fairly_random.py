@@ -7,7 +7,7 @@ import hashlib
 import time
 
 class FairlyRandom:
-    def __init__(self, api_key, bot_id, bot_name, group_id, save_file):
+    def __init__(self, api_key, bot_id, bot_name, group_id, save_file, min_ts):
         self.api_key = api_key
         self.bot_id = bot_id
         self.bot_name = bot_name
@@ -17,7 +17,7 @@ class FairlyRandom:
         self.manifold_api_url = "https://manifold.markets/api/v0"
         self.random_api_url = "https://drand.cloudflare.com/8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce/public"
 
-        self.last_comment_ts = 0
+        self.last_comment_ts = min_ts
         self.pending_requests = []
 
     def do_get(self, path, default=None):
@@ -262,8 +262,10 @@ def main():
     parser.add_argument('--bot-id', dest='bot_id', default='xVf5mxjIgHWPBHnFko05fqtsOft1')
     parser.add_argument('--group-id', dest='group_id', default='J8Z1KAZV31icklA4tgJW') # fairlyrandom
     parser.add_argument('--save-file', dest='save_file', default='state.json')
+    parser.add_argument('--default-min-ts', dest='min_ts', default=int(time.time() * 1000), type=int,
+                        help='If there is no save_file, what is the earliest timestamp of comment to process? Defaults to now')
     args = parser.parse_args()
-    fr = FairlyRandom(args.api_key, args.bot_id, args.bot_name, args.group_id, args.save_file)
+    fr = FairlyRandom(args.api_key, args.bot_id, args.bot_name, args.group_id, args.save_file, args.min_ts)
     fr.load_state()
 
     while True:
