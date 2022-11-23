@@ -24,3 +24,24 @@ Usage instructions and suggestions:
 
 If you'd like to run your own copy of this code feel free, but please give your bot a sufficiently distinct name.
 If you modify the code, please make sure the comment posted by your bot points to the modified version of the code and not this repo.
+
+#### Verification Details
+
+The general idea here is that we post two comments:
+ 1. The declaration comment: Defines the key parameters (current round of drand, salt taken from the request comment, and numeric range of the final output)
+	and specifies the algorithm that will be used to convert these to our final random number once the next round of drand is available.
+ 2. The result comment: Once the next round of drand is released, we carry out the algorithm specified in the declaration and provide the final random number.
+
+In theory, the result comment is unnecessary -- anybody could compute its exact text independently just based on the declaration comment and the next round of drand.
+That's the key property which means you don't need to trust the bot operator here. Obviously we will still post it though since that makes the bot a lot more convenient
+to use!
+
+To verify that the bot hasn't been manipulated by its operator, you should check the following:
+ 1. In the declaration comment, make sure that the time it was posted corresponds to the round of drand that was used.
+	In theory, if the bot used an earlier round of drand that was already known, then it could predict the result in advance.
+	To help make this more convenient to check, the bot posts what time it retrieved the current drand round.
+ 2. In the declaration comment, make sure that the salt is unique from any other declaration comments that were made, in order for the randomness to be independent.
+ 3. In the declaration comment, make sure that the numeric range to be used matches the one requested.
+ 4. In the declaration comment, make sure that the algorithm to be used for refining the randomness hasn't been changed unexpectedly.
+ 5. In the result comment, run the algorithm from the declaration comment (the bot helpfully spells out how to do this but you don't need to take its word for it) and check
+    that the result matches.
