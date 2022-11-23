@@ -14,7 +14,7 @@ Given the following assumptions:
  - Validity of the [drand distributed randomness protocol](https://blog.cloudflare.com/league-of-entropy/) as described in the [paper](https://www.ieee-security.org/TC/SP2017/papers/413.pdf).
 
 Usage instructions and suggestions:
- 1. In order to use the bot, you'll need to first add your market to a designated group (currently "fairlyrandom").
+ 1. In order to use the bot, you'll need to first add your market to a designated group (currently "FairlyRandom").
  2. When you're ready to inject the randomness, I would recommend temporarily closing your market unless
     "bots racing to be first to respond to the generated randomness" is a desired part of your market structure.
  3. Post a comment on the market tagging @FairlyRandom and containing a single number consisting of your desired range.
