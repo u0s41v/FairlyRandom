@@ -96,12 +96,12 @@ class FairlyRandom:
             result = {}
             for x in content:
                 rec = self.parse_content(x)
-                if rec is not None:
+                if rec:
                     result.update(rec)
             if result:
                 return result
             else:
-                return None
+                return {}
         elif isinstance(content, dict):
             if "content" in content:
                 return self.parse_content(content["content"])
@@ -112,20 +112,27 @@ class FairlyRandom:
                 and cattr.get("id") == self.bot_id):
                 return {"has_mention": True}
 
+            res = {}
             text = content.get("text", "").strip()
+            tag = f"@{self.bot_name}"
+            if text.startswith(tag):
+               res = {"has_mention": True}
+               text = text[len(tag):].strip()
+
             try:
                 text_int = int(text)
                 if text_int <= 1 or text_int > 2**48:
-                    return None
-                return {"number": text_int}
+                    return res
+                res.update({"number": text_int})
+                return res
             except:
-                return None
+                return res
         else:
-            return None
+            return {}
 
     def check_new_request(self, comment):
         req = self.parse_content(comment.get("content"))
-        if req is not None and req.get('has_mention') and req.get('number'):
+        if req and req.get('has_mention') and req.get('number'):
             req["salt"] = comment["id"]
             req["contractId"] = comment["contractId"]
             req["state"] = "init"
