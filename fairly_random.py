@@ -114,7 +114,7 @@ class FairlyRandom:
             text = content.get("text", "").strip()
             try:
                 text_int = int(text)
-                if text_int <= 1 or text_int >= 2**64:
+                if text_int <= 1 or text_int > 2**48:
                     return None
                 return {"number": text_int}
             except:
@@ -156,6 +156,7 @@ class FairlyRandom:
             m.update(data)
             log.append(data.decode('ascii'))
 
+        num_retries = 0
         evenly_divisible = ((2**64)//max_num)*max_num
         m = hashlib.sha256()
         add_to_hash(randomness["randomness"].encode('ascii'))
@@ -163,8 +164,9 @@ class FairlyRandom:
         while True:
             m_int = int.from_bytes(m.digest()[:8], byteorder='big')
             if m_int < evenly_divisible:
-                return (m_int % max_num) + 1, "".join(log), m.hexdigest()[:16]
-            add_to_hash("-RETRY")
+                return (m_int % max_num) + 1, "".join(log), m.hexdigest()[:16], num_retries
+            add_to_hash("-RETRY".encode('ascii'))
+            num_retries += 1
             print(f"Trying again because {m_int} >= {evenly_divisible} when resizing to {max_num}")
 
     def process_request(self, req, randomness_cache):
@@ -177,14 +179,13 @@ class FairlyRandom:
 
             rounds = randomness["round"]
             comment = "\n".join([
-                f'### You asked for a random integer between 1 and {req["number"]}, inclusive. Coming up shortly! (experimental)'
+                f'### You asked for a random integer between 1 and {req["number"]}, inclusive. Coming up shortly!',
+                'You can view the open-source implementation and usage instructions for this bot on [GitHub](https://github.com/u0s41v/FairlyRandom/).'
                 '',
                 '#### Technical details'
                 '',
-                f'The latest round of randomness at the time the request was received was {self.randomness_link(rounds)}, '
-                f'so the following round ({rounds+1}) will be used to fulfill the request.',
-                f'The salt (taken from the comment id) is {req["salt"]}.',
-                'Randomness source will be converted to the appropriate range using the following algorithm:',
+                f'Previous round: {self.randomness_link(rounds)}, next round: {self.randomness_link(rounds+1)}, salt: {req["salt"]}.',
+                'Algorithm for converting to requested range:',
                 '```',
                 f'evenly_divisible = {((2**64)//max_num)*max_num}',
                 f'm = hashlib.sha256()',
@@ -217,14 +218,14 @@ class FairlyRandom:
 
             max_num = req["number"]
             salt = req["salt"]
-            rand_int, log, hex_digest = self.randomness_to_int(randomness, salt, max_num)
+            rand_int, log, hex_digest, num_retries = self.randomness_to_int(randomness, salt, max_num)
             comment = "\n".join([
                 f'### Your random number is: {rand_int}',
                 '',
                 '#### Technical details'
                 '',
-                f'Round {self.randomness_link(rounds)} and salt {salt} was used to fulfill the request. ',
-                f'To reproduce the final result, you can run the following Linux command: ',
+                f'Round: {self.randomness_link(rounds)}, salt: {salt}, retries: {num_retries}.',
+                f'To validate the result, run the following Linux command: ',
                 '```',
                 f'echo -n {log} | sha256sum',
                 '```',
@@ -259,7 +260,7 @@ def main():
     parser.add_argument('--api-key', dest='api_key')
     parser.add_argument('--bot-name', dest='bot_name', default='FairlyRandom')
     parser.add_argument('--bot-id', dest='bot_id', default='xVf5mxjIgHWPBHnFko05fqtsOft1')
-    parser.add_argument('--group-id', dest='group_id', default='YOkz3UZsh7MkxtA4ANBZ')
+    parser.add_argument('--group-id', dest='group_id', default='J8Z1KAZV31icklA4tgJW') # fairlyrandom
     parser.add_argument('--save-file', dest='save_file', default='state.json')
     args = parser.parse_args()
     fr = FairlyRandom(args.api_key, args.bot_id, args.bot_name, args.group_id, args.save_file)

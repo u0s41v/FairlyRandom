@@ -17,7 +17,7 @@ Usage instructions and suggestions:
  2. When you're ready to inject the randomness, I would recommend temporarily closing your market unless
     "bots racing to be first to respond to the generated randomness" is a desired part of your market structure.
  3. Post a comment on the market tagging @FairlyRandom and containing a single number consisting of your desired range.
-    For example, "@FairlyRandom 6" to generate a random number from 1-6.
+    For example, "@FairlyRandom 6" to generate a random number from 1-6. Minimum 2, maximum 2^48.
  4. The bot will respond with a message acknowledging your request and explicitly stating all the parameters to ensure everything is fair.
     Then shortly afterwards it will provide the random number that was requested along with instructions to verify it.
 
