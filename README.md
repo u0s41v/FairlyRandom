@@ -13,7 +13,8 @@ Given the following assumptions:
  - At least one entity in Cloudflare's [League of Entropy](https://www.cloudflare.com/leagueofentropy/) is trustworthy.
  - Validity of the [drand distributed randomness protocol](https://blog.cloudflare.com/league-of-entropy/) as described in the [paper](https://www.ieee-security.org/TC/SP2017/papers/413.pdf).
 
-Usage instructions and suggestions:
+#### Usage Instructions
+
  1. In order to use the bot, you'll need to first add your market to a designated group (currently "FairlyRandom").
  2. When you're ready to inject the randomness, I would recommend temporarily closing your market unless
     "bots racing to be first to respond to the generated randomness" is a desired part of your market structure.
@@ -21,6 +22,19 @@ Usage instructions and suggestions:
     For example, "@FairlyRandom 6" to generate a random number from 1-6. Minimum 2, maximum 2^48.
  4. The bot will respond with a message acknowledging your request and explicitly stating all the parameters to ensure everything is fair.
     Then shortly afterwards it will provide the random number that was requested along with instructions to verify it.
+
+For more advanced usage, the following attributes are available:
+ - `min=N` to change the minimum value of the range (inclusive) to something other than the default 1.
+ - `max=N` as an alternative syntax for specifying the maximum value of the range (inclusive).
+ - `offset=N` to specify how many rounds to wait before retrieving the randomness. Default is 2, min 1, max 100. Increasing the offset makes the result take longer to provide (about 30 seconds per increment) but can increase the security.
+
+For example, to generate a random integer between 10 and 100 (inclusive) with offset set to 5 for increased security:
+
+```
+@FairlyRandom min=10 max=100 offset=5
+```
+
+#### Running it yourself
 
 If you'd like to run your own copy of this code feel free, but please give your bot a sufficiently distinct name.
 If you modify the code, please make sure the comment posted by your bot points to the modified version of the code and not this repo.
