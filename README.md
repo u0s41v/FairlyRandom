@@ -21,12 +21,13 @@ Given the following assumptions:
  3. Post a comment on the market tagging @FairlyRandom and containing a single number consisting of your desired range.
     For example, "@FairlyRandom 6" to generate a random number from 1-6. Minimum 2, maximum 2^48.
  4. The bot will respond with a message acknowledging your request and explicitly stating all the parameters to ensure everything is fair.
-    Then shortly afterwards it will provide the random number that was requested along with instructions to verify it.
+    Then shortly afterwards it will provide the random number that was requested (along with instructions to verify it, if `verbose=true`).
 
 For more advanced usage, the following attributes are available:
  - `min=N` to change the minimum value of the range (inclusive) to something other than the default 1.
  - `max=N` as an alternative syntax for specifying the maximum value of the range (inclusive).
  - `offset=N` to specify how many rounds to wait before retrieving the randomness. Default is 2, min 1, max 100. Increasing the offset makes the result take longer to provide (about 30 seconds per increment) but can increase the security.
+ - `verbose=true` to include full technical details and verification instructions.
 
 For example, to generate a random integer between 10 and 100 (inclusive) with offset set to 5 for increased security:
 

@@ -14,11 +14,19 @@ def try_int(text):
     except:
         return None
 
+def try_bool(text):
+    if text.lower() in ("false", "no", "0"):
+        return False
+    if text.lower() in ("true", "yes", "1"):
+        return True
+    return None
+
 # attribute name, validation function, default value
 attrs = {
     "min": (try_int, 1),
     "max": (try_int, None),
-    "offset": (try_int, 2)
+    "offset": (try_int, 2),
+    "verbose": (try_bool, False)
 }
 
 class FairlyRandom:
@@ -264,29 +272,35 @@ class FairlyRandom:
             delta = max_num - min_num + 1
             rounds = randomness["round"]
             evenly_divisible = ((2**64)//delta)*delta
+            if req["verbose"]:
+                details = [
+                    'You can view the open-source implementation and usage instructions for this bot on [GitHub](https://github.com/u0s41v/FairlyRandom/).'
+                    '',
+                    '#### Technical details'
+                    '',
+                    f'Previous round: {self.randomness_link(rounds)} ({self.randomness_link("latest")}), offset: {offset}, selected round: {self.randomness_link(rounds+offset)}, salt: {req["salt"]}.',
+                    'Algorithm:',
+                    '```',
+                    f'm = hashlib.sha256()',
+                    f"m.update(randomness['randomness'].encode('ascii'))",
+                    f"m.update('-{salt}'.encode('ascii'))",
+                    'while True:',
+                    "   m_int = int.from_bytes(m.digest()[:8], byteorder='big')",
+                    f'   if m_int < {evenly_divisible}:',
+                    f'       return (m_int % {delta}) + {min_num}',
+                    '   m.update("-RETRY")',
+                    '```',
+                    'Randomness details:',
+                    '```',
+                    json.dumps(randomness),
+                    '```'
+                ]
+            else:
+                details = [
+                    f'Source: [GitHub](https://github.com/u0s41v/FairlyRandom/), previous round: {self.randomness_link(rounds)} ({self.randomness_link("latest")}), offset: {offset}, selected round: {self.randomness_link(rounds+offset)}, salt: {req["salt"]}.',
+                ]
             comment = "\n".join([
-                f'### {self.mention_user(req["userdisplay"], req["username"])} you asked for a random integer between {min_num} and {max_num}, inclusive. Coming up shortly!',
-                'You can view the open-source implementation and usage instructions for this bot on [GitHub](https://github.com/u0s41v/FairlyRandom/).'
-                '',
-                '#### Technical details'
-                '',
-                f'Previous round: {self.randomness_link(rounds)} ({self.randomness_link("latest")}), offset: {offset}, selected round: {self.randomness_link(rounds+offset)}, salt: {req["salt"]}.',
-                'Algorithm:',
-                '```',
-                f'm = hashlib.sha256()',
-                f"m.update(randomness['randomness'].encode('ascii'))",
-                f"m.update('-{salt}'.encode('ascii'))",
-                'while True:',
-                "   m_int = int.from_bytes(m.digest()[:8], byteorder='big')",
-                f'   if m_int < {evenly_divisible}:',
-                f'       return (m_int % {delta}) + {min_num}',
-                '   m.update("-RETRY")',
-                '```',
-                'Randomness details:',
-                '```',
-                json.dumps(randomness),
-                '```'
-            ])
+                f'### {self.mention_user(req["userdisplay"], req["username"])} you asked for a random integer between {min_num} and {max_num}, inclusive. Coming up shortly!'] + details)
             posted = self.post_comment(req["contractId"], comment)
             if not posted:
                 return req
@@ -310,20 +324,24 @@ class FairlyRandom:
             delta = max_num - min_num + 1
             salt = req["salt"]
             rand_int, log, hex_digest, num_retries = self.randomness_to_int(randomness, salt, min_num, max_num)
+            if req["verbose"]:
+                details = [
+                    '#### Technical details'
+                    '',
+                    f'Round: {self.randomness_link(rounds)}, salt: {salt}, retries: {num_retries}.',
+                    f'To validate, run the following Linux command: ',
+                    f'`echo -n {log} | sha256sum`.',
+                    f'Take the first sixteen hex digits of the output (0x{hex_digest} = {int(hex_digest, 16)}) modulo {delta} and add {min_num}.',
+                    'Randomness details: ',
+                    '```',
+                    json.dumps(randomness),
+                    '```'
+                ]
+            else:
+                details = [f'Salt: {salt}, round: {self.randomness_link(rounds)} (signature {randomness["signature"]})']
+
             comment = "\n".join([
-                f'### {self.mention_user(req["userdisplay"], req["username"])} your random number is: {rand_int}',
-                '',
-                '#### Technical details'
-                '',
-                f'Round: {self.randomness_link(rounds)}, salt: {salt}, retries: {num_retries}.',
-                f'To validate, run the following Linux command: ',
-                f'`echo -n {log} | sha256sum`.',
-                f'Take the first sixteen hex digits of the output (0x{hex_digest} = {int(hex_digest, 16)}) modulo {delta} and add {min_num}.',
-                'Randomness details: ',
-                '```',
-                json.dumps(randomness),
-                '```'
-            ])
+                f'### {self.mention_user(req["userdisplay"], req["username"])} your random number is: {rand_int}'] + details)
             posted = self.post_comment(req["contractId"], comment)
             if not posted:
                 return req
