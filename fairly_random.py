@@ -5,6 +5,21 @@ import requests
 import os
 import hashlib
 import time
+import re
+
+def try_int(text):
+    try:
+        text_int = int(text)
+        return text_int
+    except:
+        return None
+
+# attribute name, validation function, default value
+attrs = {
+    "min": (try_int, 1),
+    "max": (try_int, None),
+    "offset": (try_int, 2)
+}
 
 class FairlyRandom:
     def __init__(self, api_key, bot_id, bot_name, group_id, save_file, min_ts):
@@ -49,8 +64,10 @@ class FairlyRandom:
     def randomness_link(self, rounds):
         return f'[{rounds}]({self.random_api_url}/{rounds})'
 
-    def mention_user(self, user):
-        return f'[@{user}](https://manifold.markets/{user})'
+    def mention_user(self, userdisplay, username):
+        def sanitize(name):
+            return re.sub('[^a-zA-Z0-9._,]', '', username)
+        return f'[@{sanitize(username)}](https://manifold.markets/{sanitize(username)})'
 
     def get_randomness(self, rounds, cache):
         if rounds in cache:
@@ -112,31 +129,47 @@ class FairlyRandom:
                 and cattr.get("id") == self.bot_id):
                 return {"has_mention": True}
 
-            res = {}
-            text = content.get("text", "").strip()
-            tag = f"@{self.bot_name}"
-            if text.startswith(tag):
-               res = {"has_mention": True}
-               text = text[len(tag):].strip()
+            if "text" in content:
+                return self.parse_content(content["text"])
 
-            try:
-                text_int = int(text)
-                if text_int <= 1 or text_int > 2**48:
-                    return res
-                res.update({"number": text_int})
-                return res
-            except:
-                return res
+            return {}
+
+        elif isinstance(content, str):
+            res = {}
+            for part in content.strip().split():
+                if part == f"@{self.bot_name}":
+                    res["has_mention"] = True
+
+                elif part.count("=") == 1:
+                    key, val = part.split("=")
+                    if key in attrs:
+                        validator, _ = attrs[key]
+                        val_parsed = validator(val)
+                        if val_parsed is not None:
+                            res[key] = val_parsed
+                else:
+                    text_int = try_int(part)
+                    if text_int is not None:
+                        res["number"] = text_int
+
+            return res
         else:
             return {}
 
     def check_new_request(self, comment):
         req = self.parse_content(comment.get("content"))
-        if req and req.get('has_mention') and req.get('number'):
+        if req and req.get('has_mention') and ('number' in req or 'max' in req):
             req["salt"] = comment["id"]
             req["contractId"] = comment["contractId"]
             req["state"] = "init"
-            req["user"] = comment["userName"]
+            req["userdisplay"] = comment["userName"]
+            req["username"] = comment["userUsername"]
+            for key, (validator, default) in attrs.items():
+                if key not in req:
+                    req[key] = default
+
+            if req["max"] is None:
+                req["max"] = req["number"]
             return [req]
         return []
 
@@ -164,42 +197,73 @@ class FairlyRandom:
         self.last_comment_ts = max(new_ts, self.last_comment_ts)
         self.pending_requests += pending_requests
 
-    def randomness_to_int(self, randomness, salt, max_num):
+    def randomness_to_int(self, randomness, salt, min_num, max_num):
         log = []
         def add_to_hash(data):
             m.update(data)
             log.append(data.decode('ascii'))
 
         num_retries = 0
-        evenly_divisible = ((2**64)//max_num)*max_num
+        delta = max_num - min_num + 1
+        evenly_divisible = ((2**64)//delta)*delta
         m = hashlib.sha256()
         add_to_hash(randomness["randomness"].encode('ascii'))
         add_to_hash(("-" + salt).encode('ascii'))
         while True:
             m_int = int.from_bytes(m.digest()[:8], byteorder='big')
             if m_int < evenly_divisible:
-                return (m_int % max_num) + 1, "".join(log), m.hexdigest()[:16], num_retries
+                return (m_int % delta) + min_num, "".join(log), m.hexdigest()[:16], num_retries
             add_to_hash("-RETRY".encode('ascii'))
             num_retries += 1
-            print(f"Trying again because {m_int} >= {evenly_divisible} when resizing to {max_num}")
+            print(f"Trying again because {m_int} >= {evenly_divisible} when refining to {min_num}-{max_num}")
+
+    def validate_request(self, req):
+        if req["max"] <= req["min"]:
+            return "Max <= min is not allowed"
+
+        if req["max"] - req["min"] > 2**48:
+            return "Range cannot exceed 2**48"
+
+        if abs(req["max"]) >= 2**63 or abs(req["min"]) >= 2**63:
+            return "Values must fit in 63 bits"
+
+        if req["offset"] < 1:
+            return "Offset must be at least 1"
+
+        if req["offset"] > 100:
+            return "Offset cannot exceed 100"
+
+        return None
 
     def process_request(self, req, randomness_cache):
         if req["state"] == "init":
-            max_num = req["number"]
+            max_num = req["max"]
+            min_num = req["min"]
+            offset = req["offset"]
             salt = req["salt"]
+
+            reject_msg = self.validate_request(req)
+            if reject_msg is not None:
+                posted = self.post_comment(req["contractId"], f"Not a valid request: {reject_msg}")
+                if posted:
+                    return None
+                else:
+                    return req
+
             randomness = self.get_randomness(0, randomness_cache)
             if randomness is None:
                 return req
 
+            delta = max_num - min_num + 1
             rounds = randomness["round"]
-            evenly_divisible = ((2**64)//max_num)*max_num
+            evenly_divisible = ((2**64)//delta)*delta
             comment = "\n".join([
-                f'### {self.mention_user(req["user"])} you asked for a random integer between 1 and {req["number"]}, inclusive. Coming up shortly!',
+                f'### {self.mention_user(req["userdisplay"], req["username"])} you asked for a random integer between {min_num} and {max_num}, inclusive. Coming up shortly!',
                 'You can view the open-source implementation and usage instructions for this bot on [GitHub](https://github.com/u0s41v/FairlyRandom/).'
                 '',
                 '#### Technical details'
                 '',
-                f'Previous round: {self.randomness_link(rounds)}, next round: {self.randomness_link(rounds+1)}, salt: {req["salt"]}.',
+                f'Previous round: {self.randomness_link(rounds)} ({self.randomness_link("latest")}), offset: {offset}, selected round: {self.randomness_link(rounds+offset)}, salt: {req["salt"]}.',
                 'Algorithm:',
                 '```',
                 f'm = hashlib.sha256()',
@@ -208,7 +272,7 @@ class FairlyRandom:
                 'while True:',
                 "   m_int = int.from_bytes(m.digest()[:8], byteorder='big')",
                 f'   if m_int < {evenly_divisible}:',
-                f'       return (m_int % {max_num}) + 1',
+                f'       return (m_int % {delta}) + {min_num}',
                 '   m.update("-RETRY")',
                 '```',
                 'Randomness details:',
@@ -220,28 +284,34 @@ class FairlyRandom:
             if not posted:
                 return req
 
-            req["round"] = randomness["round"] + 1
+            req["round"] = randomness["round"] + offset
             req["state"] = "declared"
             return req
 
         if req["state"] == "declared":
             rounds = req["round"]
+            latest = self.get_randomness(0, randomness_cache)
+            if latest["round"] < rounds:
+                return req # round not ready yet
+
             randomness = self.get_randomness(rounds, randomness_cache)
             if randomness is None:
                 return req # round not ready yet
 
-            max_num = req["number"]
+            max_num = req["max"]
+            min_num = req["min"]
+            delta = max_num - min_num + 1
             salt = req["salt"]
-            rand_int, log, hex_digest, num_retries = self.randomness_to_int(randomness, salt, max_num)
+            rand_int, log, hex_digest, num_retries = self.randomness_to_int(randomness, salt, min_num, max_num)
             comment = "\n".join([
-                f'### {self.mention_user(req["user"])} your random number is: {rand_int}',
+                f'### {self.mention_user(req["userdisplay"], req["username"])} your random number is: {rand_int}',
                 '',
                 '#### Technical details'
                 '',
                 f'Round: {self.randomness_link(rounds)}, salt: {salt}, retries: {num_retries}.',
                 f'To validate, run the following Linux command: ',
                 f'`echo -n {log} | sha256sum`.',
-                f'Take the first sixteen hex digits of the output (0x{hex_digest} = {int(hex_digest, 16)}) modulo {max_num} and add one.',
+                f'Take the first sixteen hex digits of the output (0x{hex_digest} = {int(hex_digest, 16)}) modulo {delta} and add {min_num}.',
                 'Randomness details: ',
                 '```',
                 json.dumps(randomness),
