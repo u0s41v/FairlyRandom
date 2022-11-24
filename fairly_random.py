@@ -67,7 +67,11 @@ class FairlyRandom:
     def mention_user(self, userdisplay, username):
         def sanitize(name):
             return re.sub('[^a-zA-Z0-9._,]', '', username)
-        return f'[@{sanitize(username)}](https://manifold.markets/{sanitize(username)})'
+        sanitized = sanitize(username)
+        if sanitized == username:
+            return f'[@{sanitized}](https://manifold.markets/{sanitized})'
+        else:
+            return f'@{sanitized}'
 
     def get_randomness(self, rounds, cache):
         if rounds in cache:
