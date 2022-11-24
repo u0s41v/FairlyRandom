@@ -153,13 +153,11 @@ class FairlyRandom:
             comments = self.do_get(f"/comments/?contractId={market_id}", default=[])
             for comment in comments:
                 create_time = comment["createdTime"]
+                new_ts = max(new_ts, create_time)
                 if create_time <= self.last_comment_ts:
                     break
 
                 pending_requests += self.check_new_request(comment)
-                new_ts = max(new_ts, create_time)
-
-            new_ts = max(new_ts, last_update)
 
         if len(pending_requests) > 0:
             print(f"Added {len(pending_requests)} new requests")
