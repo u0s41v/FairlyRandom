@@ -146,7 +146,7 @@ class FairlyRandom:
         pending_requests = []
         for market in group_markets:
             market_id = market["id"]
-            last_update = market["lastUpdatedTime"]
+            last_update = market.get("lastUpdatedTime", 0)
             if last_update <= self.last_comment_ts:
                 continue
 
