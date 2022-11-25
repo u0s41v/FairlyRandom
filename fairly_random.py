@@ -265,8 +265,17 @@ class FairlyRandom:
                 else:
                     return req
 
-            randomness = self.get_randomness(0, randomness_cache)
+            randomness = self.get_randomness("latest", randomness_cache)
             if randomness is None:
+                return req
+
+            now = int(time.time())
+            if now - randomness["timestamp_retrieved"] > 15:
+                print(f"timestamp_retrieved on latest is too stale to declare ({now} vs {randomness['timestamp_retrieved']})")
+                return req
+
+            if now - randomness["timestamp_available_estimate"] > 27:
+                print(f"timestamp_available_estimate is too stale to declare ({now} vs {randomness['timestamp_available_estimate']})")
                 return req
 
             delta = max_num - min_num + 1
@@ -311,7 +320,7 @@ class FairlyRandom:
 
         if req["state"] == "declared":
             rounds = req["round"]
-            latest = self.get_randomness(0, randomness_cache)
+            latest = self.get_randomness("latest", randomness_cache)
             if latest["round"] < rounds:
                 return req # round not ready yet
 
