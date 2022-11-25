@@ -128,6 +128,8 @@ class FairlyRandom:
             result = {}
             for x in content:
                 rec = self.parse_content(x)
+                if "number" in rec and "number" in result:
+                    result["ambiguous_num"] = True
                 if rec:
                     result.update(rec)
             if result:
@@ -165,6 +167,8 @@ class FairlyRandom:
                 else:
                     text_int = try_int(part)
                     if text_int is not None:
+                        if "number" in res:
+                            res["ambiguous_num"] = True
                         res["number"] = text_int
 
             return res
@@ -172,8 +176,12 @@ class FairlyRandom:
             return {}
 
     def check_new_request(self, comment):
+        # Don't respond to our own comments or we could create a loop!
+        if comment["userUsername"] == self.bot_name or comment["userId"] == self.bot_id:
+            return []
+
         req = self.parse_content(comment.get("content"))
-        if req and req.get('has_mention') and ('number' in req or 'max' in req):
+        if req and req.get('has_mention'):
             req["salt"] = comment["id"]
             req["contractId"] = comment["contractId"]
             req["state"] = "init"
@@ -183,7 +191,7 @@ class FairlyRandom:
                 if key not in req:
                     req[key] = default
 
-            if req["max"] is None:
+            if req["max"] is None and "number" in req and not req.get("ambiguous_num", False):
                 req["max"] = req["number"]
             return [req]
         return []
@@ -233,6 +241,12 @@ class FairlyRandom:
             print(f"Trying again because {m_int} >= {evenly_divisible} when refining to {min_num}-{max_num}")
 
     def validate_request(self, req):
+        if req["max"] is None:
+            if "number" in req and req.get("ambiguous_num", False):
+                return "Range is ambiguous. Please include only a single number, or explicitly state max=N"
+            else:
+                return f"No range specified. Try `@{self.bot_name} 10`"
+
         if req["max"] <= req["min"]:
             return "Max <= min is not allowed"
 
