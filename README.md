@@ -60,3 +60,12 @@ To verify that the bot hasn't been manipulated by its operator, you should check
  4. In the declaration comment, make sure that the algorithm to be used for refining the randomness hasn't been changed unexpectedly.
  5. In the result comment, run the algorithm from the declaration comment (the bot helpfully spells out how to do this but you don't need to take its word for it) and check
     that the result matches.
+
+A utility tool called `fairly_random_verify.py` has been provided that can automatically compute the expected random number output given the randomization parameters (salt, selected round, min, and max) to expedite the above process. Sample usage:
+```
+$ python3 ./fairly_random_verify.py --round 2469101 --salt COmdLMqXCijncW88UUqk --max 10
+Using the sha256sum of d4725e8bebf21a582250da9dfda49215f00ff36acffa7db00df37ab11e8050e0-COmdLMqXCijncW88UUqk, we get a hash starting with 55c1cf0f34c4524c.
+The final result should be:
+7
+Also make sure to confirm that the timestamp on the declaration comment is earlier than 1669504050 (2022-11-26 23:07:30 UTC)
+```

@@ -383,10 +383,9 @@ class FairlyRandom:
                 new_pending_requests.append(new_req)
         self.pending_requests = new_pending_requests
 
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--api-key', dest='api_key')
+    parser.add_argument('--api-key', dest='api_key', required=True)
     parser.add_argument('--bot-name', dest='bot_name', default='FairlyRandom')
     parser.add_argument('--bot-id', dest='bot_id', default='xVf5mxjIgHWPBHnFko05fqtsOft1')
     parser.add_argument('--group-id', dest='group_id', default='J8Z1KAZV31icklA4tgJW') # fairlyrandom
