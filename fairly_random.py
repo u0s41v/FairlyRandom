@@ -46,7 +46,7 @@ class FairlyRandom:
     def do_get(self, path, default=None):
         url = f"{self.manifold_api_url}{path}"
         try:
-            req = requests.get(url)
+            req = requests.get(url, timeout=3)
         except Exception as e:
             print(e)
             return default
