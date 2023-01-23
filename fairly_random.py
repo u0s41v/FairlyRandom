@@ -335,7 +335,7 @@ class FairlyRandom:
         if req["state"] == "declared":
             rounds = req["round"]
             latest = self.get_randomness("latest", randomness_cache)
-            if latest["round"] < rounds:
+            if latest is None or latest["round"] < rounds:
                 return req # round not ready yet
 
             randomness = self.get_randomness(rounds, randomness_cache)
