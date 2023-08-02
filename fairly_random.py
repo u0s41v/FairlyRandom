@@ -208,6 +208,9 @@ class FairlyRandom:
 
             comments = self.do_get(f"/comments/?contractId={market_id}", default=[])
             for comment in comments:
+                if not isinstance(comment, dict):
+                    print("Non-dict comment: " +str(comment))
+                    continue
                 create_time = comment["createdTime"]
                 new_ts = max(new_ts, create_time)
                 if create_time <= self.last_comment_ts:
