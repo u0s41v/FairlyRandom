@@ -38,7 +38,7 @@ class FairlyRandom:
         self.save_file = save_file
 
         self.manifold_api_url = "https://manifold.markets/api/v0"
-        self.random_api_url = "https://drand.cloudflare.com/8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce/public"
+        self.random_api_url = "https://api.drand.sh/8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce/public"
 
         self.last_comment_ts = min_ts
         self.pending_requests = []
