@@ -201,6 +201,9 @@ class FairlyRandom:
         group_markets = self.do_get(f"/group/by-id/{self.group_id}/markets", default=[])
         pending_requests = []
         for market in group_markets:
+            if not isinstance(market, dict):
+               print("Invalid market:", market)
+               continue
             market_id = market["id"]
             last_update = market.get("lastUpdatedTime", 0)
             if last_update <= self.last_comment_ts:
