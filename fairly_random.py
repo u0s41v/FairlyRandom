@@ -46,14 +46,14 @@ class FairlyRandom:
     def do_get(self, path, default=None):
         url = f"{self.manifold_api_url}{path}"
         try:
-            req = requests.get(url, timeout=3)
+            req = requests.get(url, timeout=8)
         except Exception as e:
-            print(e)
+            print(path, e)
             return default
         try:
             return req.json()
         except requests.exceptions.JSONDecodeError:
-            print(req.text)
+            print(path, req.text)
             return default
 
     def post_comment(self, contractId, comment):
@@ -61,12 +61,12 @@ class FairlyRandom:
         try:
             req = requests.post(url, json={'contractId': contractId, 'markdown': comment}, headers={'Authorization': f'Key {self.api_key}'}, timeout=3)
         except Exception as e:
-            print(e)
+            print("Failed to post comment", e)
             return False
         if req.status_code == 200:
             return True
         else:
-            print(req.text)
+            print("Failed to post comment", req.status_code, req.text)
             return False
 
     def randomness_link(self, rounds):
