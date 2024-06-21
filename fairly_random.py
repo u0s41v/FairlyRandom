@@ -198,18 +198,28 @@ class FairlyRandom:
 
     def find_new_requests(self):
         new_ts = 0
-        group_markets = self.do_get(f"/group/by-id/{self.group_id}/markets", default=[])
+        if self.group_id is not None:
+            group_id = f"&groupId={self.group_id}"
+        else:
+            group_id = ""
+        group_markets = self.do_get(f"/markets?sort=last-comment-time&limit=200&order=desc{group_id}")
+        if group_markets is None:
+            print("Got None on markets query")
+            return
+
         pending_requests = []
         for market in group_markets:
             if not isinstance(market, dict):
                print("Invalid market:", market)
                continue
             market_id = market["id"]
-            last_update = market.get("lastUpdatedTime", 0)
+            last_update = market.get("lastCommentTime", market.get("lastUpdatedTime", 0))
             if last_update <= self.last_comment_ts:
                 continue
 
             comments = self.do_get(f"/comments/?contractId={market_id}", default=[])
+            market_title = market["question"]
+            print(f"Getting comments for {market_id}: {market_title}")
             for comment in comments:
                 if not isinstance(comment, dict):
                     print("Non-dict comment: " +str(comment))
@@ -394,7 +404,7 @@ def main():
     parser.add_argument('--api-key', dest='api_key', required=True)
     parser.add_argument('--bot-name', dest='bot_name', default='FairlyRandom')
     parser.add_argument('--bot-id', dest='bot_id', default='xVf5mxjIgHWPBHnFko05fqtsOft1')
-    parser.add_argument('--group-id', dest='group_id', default='J8Z1KAZV31icklA4tgJW') # fairlyrandom
+    parser.add_argument('--group-id', dest='group_id', default=None)
     parser.add_argument('--save-file', dest='save_file', default='state.json')
     parser.add_argument('--default-min-ts', dest='min_ts', default=int(time.time() * 1000), type=int,
                         help='If there is no save_file, what is the earliest timestamp of comment to process? Defaults to now')
@@ -408,7 +418,7 @@ def main():
         #fr.show_pending_requests()
         fr.process_pending_requests()
         fr.save_state()
-        time.sleep(3)
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
