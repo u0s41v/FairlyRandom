@@ -219,7 +219,7 @@ class FairlyRandom:
 
             comments = self.do_get(f"/comments/?contractId={market_id}", default=[])
             market_title = market["question"]
-            print(f"Getting comments for {market_id}: {market_title}")
+            #print(f"Getting comments for {market_id}: {market_title}")
             for comment in comments:
                 if not isinstance(comment, dict):
                     print("Non-dict comment: " +str(comment))
