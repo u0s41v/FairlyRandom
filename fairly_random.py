@@ -56,10 +56,10 @@ class FairlyRandom:
             print(path, req.text)
             return default
 
-    def post_comment(self, contractId, comment):
+    def post_comment(self, contractId, comment, **kwargs):
         url = f"{self.manifold_api_url}/comment"
         try:
-            req = requests.post(url, json={'contractId': contractId, 'markdown': comment}, headers={'Authorization': f'Key {self.api_key}'}, timeout=3)
+            req = requests.post(url, json={'contractId': contractId, 'markdown': comment, **kwargs}, headers={'Authorization': f'Key {self.api_key}'}, timeout=3)
         except Exception as e:
             print("Failed to post comment", e)
             return False
@@ -182,6 +182,7 @@ class FairlyRandom:
 
         req = self.parse_content(comment.get("content"))
         if req and req.get('has_mention'):
+            req["thread"] = comment.get("replyToCommentId", comment["id"])
             req["salt"] = comment["id"]
             req["contractId"] = comment["contractId"]
             req["state"] = "init"
@@ -289,7 +290,7 @@ class FairlyRandom:
 
             reject_msg = self.validate_request(req)
             if reject_msg is not None:
-                posted = self.post_comment(req["contractId"], f"Not a valid request: {reject_msg}")
+                posted = self.post_comment(req["contractId"], f"Not a valid request: {reject_msg}", replyToCommentId=req["thread"])
                 if posted:
                     return None
                 else:
@@ -340,7 +341,7 @@ class FairlyRandom:
                 ]
             comment = "\n".join([
                 f'### {self.mention_user(req["userdisplay"], req["username"])} you asked for a random integer between {min_num} and {max_num}, inclusive. Coming up shortly!'] + details)
-            posted = self.post_comment(req["contractId"], comment)
+            posted = self.post_comment(req["contractId"], comment, replyToCommentId=req["thread"])
             if not posted:
                 return req
 
@@ -381,7 +382,7 @@ class FairlyRandom:
 
             comment = "\n".join([
                 f'### {self.mention_user(req["userdisplay"], req["username"])} your random number is: {rand_int}'] + details)
-            posted = self.post_comment(req["contractId"], comment)
+            posted = self.post_comment(req["contractId"], comment, replyToCommentId=req["thread"])
             if not posted:
                 return req
 
